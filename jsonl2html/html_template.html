@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSONL VISUALIZER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/styles/default.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Font Awesome for icons -->
+    
+    <style>
+        /* Basic page styles */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { display: flex; height: 100vh; }
+        .nav { width: 250px; background-color: #f4f4f4; border-right: 1px solid #ccc; display: flex; flex-direction: column; overflow-y: auto; }
+        .searchBox { padding: 10px; border: none; border-bottom: 1px solid #ccc; outline: none; width: 100%; }
+        .resize-handle { width: 5px; cursor: ew-resize; background-color: #ccc; }
+        .content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        .nav-item { padding: 2px; cursor: pointer; background-color: #e7e7e7; margin-bottom: 5px; border-radius: 5px; text-align: left;}
+        .nav-item:hover { background-color: #ddd; }
+        .highlight { background-color: yellow; }
+        .key-value { margin-bottom: 10px; }
+        .key-value span { font-weight: bold; cursor: pointer; padding: 5px; background-color: #e0e0e0; border-radius: 3px; display: inline-block; margin-bottom: 5px; }
+        .value { display: none; margin-left: 20px; }
+        .btn-group { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; }
+        .btn { background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn:hover { background-color: #0056b3; }
+        .loading { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; }
+        .a { color: green; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav" id="navigation">
+            <input type="text" id="searchBox" placeholder="Search...">
+            <div class="resize-handle" id="resizeHandle"></div>
+        </div>
+        <div class="content" id="visualization">
+            <div >
+                <div id='loading_text'><img src='https://i.pinimg.com/originals/8a/c1/29/8ac12962c05648c55ca85771f4a69b2d.gif'><h1>Loading ...</h1></img></div>
+                <button id="prevButton" class="btn">⬆️ Prev</button>
+                <button id="nextButton" class="btn">⬇️ Next</button>
+                <button id="show-hide-all" class="btn">Show All</button>
+            </div>
+            <p class="no-data">Select an item from the navigation to view its details.</p>
+            <p class="loading">Loading...</p>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js"></script>    
+    <script>
+        let isResizing = false;
+        let jsonData = [];
+        let expandedKeys = {};
+        let currentIndex = 0;
+
+        const navContainer = document.getElementById('navigation');
+        const contentContainer = document.getElementById('visualization');
+
+        let resizeHandle = document.getElementById('resizeHandle');
+        let showHideAllButton = document.getElementById('show-hide-all');
+        let prevButton = document.getElementById('prevButton');
+        let nextButton = document.getElementById('nextButton');
+        let searchBox = document.getElementById('searchBox');
+        const loadingIndicator = document.querySelector('.loading');
+
+        // Example base64 data
+        let base64Data = "BASE64STRING"; // Replace with actual Base64 data
+
+        // Loading the JSON data
+        try {
+            loadingIndicator.style.display = 'block'; // Show loading
+            jsonData = JSON.parse(atob(base64Data));
+            base64Data = null
+            loadingIndicator.style.display = 'none'; // Hide loading
+            populateNavigation();
+            document.getElementById("loading_text").hidden = true
+        } catch (error) {
+            console.error("Error decoding base64 JSON:", error);
+            loadingIndicator.innerText = "Error loading data.";
+        }
+
+
+
+        function addAllEventListener(){
+            showHideAllButton = document.getElementById('show-hide-all');
+            prevButton = document.getElementById('prevButton');
+            nextButton = document.getElementById('nextButton');
+            searchBox = document.getElementById('searchBox');
+
+            showHideAllButton.onclick = () => toggleAllVisibility(showHideAllButton.innerText === 'Show All');
+            
+            prevButton.onclick = () => navigateToIndex(currentIndex - 1);
+            nextButton.onclick = () => navigateToIndex(currentIndex + 1);
+            
+            // Updated to trigger on Enter key press
+            searchBox.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    populateNavigation(searchBox.value);
+                }
+            });
+            // Resizing functionality
+            resizeHandle.addEventListener('mousedown', () => { isResizing = true; });
+            document.addEventListener('mouseup', () => { isResizing = false; });
+            document.addEventListener('mousemove', (e) => {
+                if (isResizing) {
+                    const newWidth = e.clientX;
+                    if (newWidth > 150 && newWidth < window.innerWidth - 150) {
+                        navContainer.style.width = `${newWidth}px`;
+                    }
+                }
+            });
+        } 
+
+        // Display data function
+        function displayData(data, index) {
+            currentIndex = index;
+            contentContainer.innerHTML = '<div class="btn-group">' + showHideAllButton.outerHTML + prevButton.outerHTML + nextButton.outerHTML + '</div>';
+            const indexElement = document.createElement('h2');
+            indexElement.innerHTML = `<a href="#index=${index}">Index ${index}</a>`;
+            contentContainer.appendChild(indexElement);
+            for (const [key, value] of Object.entries(data)) {
+                renderKeyValue(key, value, contentContainer);
+            }
+            window.location.hash = `index=${index}`;
+            addAllEventListener()
+           
+        }
+
+        // Render key-value pairs function
+        function renderKeyValue(key, value, container) {
+            const keyValueDiv = document.createElement('div');
+            keyValueDiv.classList.add('key-value');
+
+            // Create the key element with expandable behavior
+            const keySpan = document.createElement('span');
+            keySpan.textContent = key;
+            keySpan.classList.add('key');
+            keySpan.onclick = () => toggleVisibility(keySpan.nextElementSibling);
+
+            const valueDiv = document.createElement('div');
+            valueDiv.classList.add('value');
+            valueDiv.style.display = expandedKeys[key] ? 'block' : 'none';
+
+            if (typeof value === 'object' && value !== null) {
+                for (const [subKey, subValue] of Object.entries(value)) {
+                    renderKeyValue(subKey, subValue, valueDiv);
+                }
+            } else {
+                valueDiv.innerHTML = marked.parse(value !== null && value !== undefined ? value.toString() : 'null');
+            }
+
+            keyValueDiv.appendChild(keySpan);
+            keyValueDiv.appendChild(valueDiv);
+            container.appendChild(keyValueDiv);
+        }
+
+        // Toggle visibility of a value element
+        function toggleVisibility(element) {
+            const key = element.previousElementSibling.textContent;
+            const isVisible = element.style.display === 'block';
+            element.style.display = isVisible ? 'none' : 'block';
+            expandedKeys[key] = !isVisible;
+            localStorage.setItem('expandedKeys', JSON.stringify(expandedKeys));
+        }
+
+        // Populate navigation with filtered items
+        function populateNavigation(filter = "") {
+            console.log(filter)
+            navContainer.innerHTML = '<input type="text" id="searchBox" placeholder="Search... (search over all documents)">';
+            navContainer.appendChild(resizeHandle);
+            
+            jsonData.forEach((item, index) => {
+                const displayName = item.__index__ ? `${index}) ${item.__index__}` : `${index})`;
+
+                // Check if the filter is not empty and if the displayName or item contains the filter word
+                const filterLower = filter.toLowerCase(); // Convert filter to lowercase for case-insensitive comparison
+                const containsFilter = displayName.toLowerCase().includes(filterLower) || JSON.stringify(item).toLowerCase().includes(filterLower);
+
+                if (filter === "" || containsFilter) {
+                    const navItem = document.createElement('div');
+                    navItem.className = 'nav-item';
+                    //navItem.innerHTML = displayName.replace(new RegExp(filter, 'gi'), match => `<span class="highlight">${match}</span>`); // Highlight matches
+                    navItem.innerHTML = marked.parse(displayName);
+                    navItem.onclick = () => displayData(item, index);
+                    navContainer.appendChild(navItem);
+                }
+            });
+            addAllEventListener()
+        }
+
+        // Navigation functions for Prev and Next
+        function navigateToIndex(index) {
+            console.log(`Navigate to index ${index}`); 
+            if (index >= 0 && index < jsonData.length) {
+                displayData(jsonData[index], index);
+            }
+        }
+
+        // Toggle all visibility
+        function toggleAllVisibility(show) {
+            document.querySelectorAll('.value').forEach(v => v.style.display = show ? 'block' : 'none');
+            showHideAllButton.innerText = show ? 'Hide All' : 'Show All';
+            Object.keys(expandedKeys).forEach(key => expandedKeys[key] = show);
+            localStorage.setItem('expandedKeys', JSON.stringify(expandedKeys));
+        }
+
+        // Navigation functions
+        //showHideAllButton.onclick = () => toggleAllVisibility(showHideAllButton.innerText === 'Show All');
+        //prevButton.onclick = () => navigateToIndex(currentIndex - 1);
+        //nextButton.onclick = () => navigateToIndex(currentIndex + 1);
+        //searchBox.oninput = (e) => populateNavigation(e.target.value);
+
+        // Load item by URL fragment
+        function loadFromFragment() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#index=')) {
+                const index = parseInt(hash.split('=')[1]);
+                if (!isNaN(index) && index >= 0 && index < jsonData.length) {
+                    displayData(jsonData[index], index);
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            expandedKeys = JSON.parse(localStorage.getItem('expandedKeys') || "{}");
+            populateNavigation();
+            loadFromFragment();
+        });
+
+        window.addEventListener('hashchange', loadFromFragment);
+    </script>
+</body>
+</html>
