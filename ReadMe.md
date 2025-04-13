@@ -55,4 +55,6 @@ pip install {path_to_package}
 ## ToDo
 - fix logger redirect to stdout other's logs
 - add .json as input format
-- add pip package to build
+- load to pip registry
+- add normal examples
+- add enable/disable markdown hint for some field
