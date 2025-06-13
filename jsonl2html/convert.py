@@ -24,19 +24,25 @@ class JSONLToHTMLConverter:
         Initialize the JsonlToHTML class, setting up input/output file names and optional index column.
 
         Parameters:
-        fn_input (str): The input JSONL file path (must end with '.jsonl').
+        fn_input (str): The input file path (must end with '.jsonl' or '.json').
         fn_output (str): The output HTML file path. Defaults to 'auto', which creates an HTML file with the same base name as the input.
         index_column (Optional[str]): Column name to use for indexing. If None, no index is added.
         additional_table_content (Optional[str]): Add adtitional table of content to the HTML file. None to disable
         """
-        assert fn_input.endswith(".jsonl"), "Input file must be a .jsonl file"
+        assert fn_input.endswith((".jsonl", ".json")), "Input file must be a .jsonl or .json file"
         
         self.fn_input = fn_input
         self.index_column = index_column
         
         # Auto-generate the output file name if not provided
         if fn_output == 'auto':
-            self.fn_output = Path(fn_input).name[:-len(".jsonl")] + '.html'
+            if fn_input.endswith(".jsonl"):
+                self.fn_output = Path(fn_input).name[:-len(".jsonl")] + '.html'
+            elif fn_input.endswith(".json"):
+                self.fn_output = Path(fn_input).name[:-len(".json")] + '.html'
+            else:
+                # Fallback - this shouldn't happen due to earlier assertion
+                self.fn_output = Path(fn_input).stem + '.html'
         else:
             self.fn_output = fn_output
         self.title = Path(fn_input).name # Extract the file name for title
@@ -44,11 +50,18 @@ class JSONLToHTMLConverter:
     
     def run(self) -> None:
         """
-        The main method that reads the JSONL file, processes the data (adds an index if needed), 
+        The main method that reads the JSONL or JSON file, processes the data (adds an index if needed), 
         and renders the HTML output file.
         """
-        # Read the JSONL data from the input file
-        data = self.read_jsonl(self.fn_input)
+        # Auto-detect file type and read accordingly
+        if self.fn_input.endswith(".jsonl"):
+            data = self.read_jsonl(self.fn_input)
+        elif self.fn_input.endswith(".json"):
+            data = self.read_json(self.fn_input)
+        else:
+            message = f"Unsupported file format. Input file must be .jsonl or .json, got: {self.fn_input}"
+            logging.error(message)
+            raise ExceptionFileInput(message)
         
         if self.index_column == 'auto':
             self.index_column = self.get_auto_index_column(data[0])
@@ -132,6 +145,42 @@ class JSONLToHTMLConverter:
             raise ExceptionFileInput(message)
     
     @classmethod
+    def read_json(cls, fn: str) -> List[Dict]:
+        """
+        Reads a JSON file and returns a list of dictionaries.
+        If the JSON contains a single object, wraps it in a list with a warning.
+        If the JSON contains an array, returns it directly.
+
+        Parameters:
+        fn (str): The filename of the JSON file.
+
+        Returns:
+        List[Dict]: A list of dictionaries representing the parsed JSON data.
+        """
+        try:
+            with open(fn, 'r') as file:
+                data = json.load(file)
+            
+            if isinstance(data, dict):
+                logging.warning(f"JSON file contains a single object, converting to list with one element")
+                return [data]
+            elif isinstance(data, list):
+                return data[:cls.max_lines]  # Respect max_lines limit like read_jsonl
+            else:
+                message = f"JSON file must contain an object or array, got {type(data)}"
+                logging.error(message)
+                raise ExceptionFileInput(message)
+                
+        except (FileNotFoundError, IOError) as e:
+            message = f"Error reading file {fn}: {e}"
+            logging.error(message)
+            raise ExceptionFileInput(message)
+        except json.JSONDecodeError as e:
+            message = f"Error parsing JSON in file {fn}: {e}"
+            logging.error(message)
+            raise ExceptionFileInput(message)
+    
+    @classmethod
     def get_auto_index_column(cls, first_row: Dict) -> Optional[str]:
         index_column = None
         for column in cls.list_auto_columns:
@@ -171,16 +220,16 @@ class JSONLToHTMLConverter:
 
 def convert_jsonl_to_html(fn_input: str, index_column: Optional[str] = 'auto', fn_output: str = "auto", additional_table_content: Optional[str] = None) -> None:
     """
-    Convert jsonl to html
+    Convert jsonl or json to html
 
     Parameters:
-    fn_input (str): The input JSONL file.
+    fn_input (str): The input JSONL or JSON file.
     index_column (Union[str, None]): The column to use for indexing (default is 'auto' look at first row for ['qustion', 'prompts], None to disable).
-    fn_output (str): The output HTML file (default is 'auto', PATH(fn_input).name[:-len(".jsonl")] + '.html')
+    fn_output (str): The output HTML file (default is 'auto', creates HTML file with same base name as input)
     """
     if fn_input is None:
         logging.error("Error: 'fn_input' argument is required.")
-        logging.error("Usage: jsonl2html <input_file.jsonl> [--index_column=<column>] [--fn_output=<output.html>]")
+        logging.error("Usage: jsonl2html <input_file.jsonl|input_file.json> [--index_column=<column>] [--fn_output=<output.html>]")
         sys.exit(1)
         
     converter = JSONLToHTMLConverter(fn_input, fn_output, index_column, additional_table_content = additional_table_content)
