@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jsonl2html"
 license = "MIT"
-version = "0.2.7"
+version = "0.3.0"
 description = "A tool to convert JSONL to HTML"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
 ]
 
 [project.scripts]

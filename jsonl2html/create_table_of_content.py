@@ -66,11 +66,13 @@ def get_unicode_small_stats(df: DataFrame) -> str:
     Bad rows are defined as those that do not belong to good Unicode blocks.
     The function calculates the total number of bad rows and symbols, as well as their rates compared to all rows and symbols.
     """
-    from unicode_stats.block_rules import list_block_good
+    from unicode_stats.unicode_parser import UnicodeBlockParser
+    preferred_blocks = UnicodeBlockParser().config.preferred_blocks
+    
     bad_rows = set()
     n_bad_symbols = 0
 
-    for row_list, n_symbols in df[~df['block'].isin(list_block_good)][['rows', 'n_symbols']].to_numpy():
+    for row_list, n_symbols in df[~df['block'].isin(preferred_blocks)][['rows', 'n_symbols']].to_numpy():
         for row_id in json.loads(row_list):
             bad_rows.add(row_id)
             n_bad_symbols += n_symbols
@@ -114,14 +116,16 @@ def create_table_of_content_unicode_stats(fn_input_jsonl: str) -> Dict[str, str]
 
     # pylint: disable=all
     try:
-        from unicode_stats.block_rules import list_block_good
+        from unicode_stats.unicode_parser import UnicodeBlockParser
+        preferred_blocks = UnicodeBlockParser().config.preferred_blocks
         from unicode_stats.aggregation import AggregatedUnicodeBlockParser
         agregated_parser = AggregatedUnicodeBlockParser(columns=None)
+
         df = agregated_parser.get_stats(fn_input_jsonl)
     except ModuleNotFoundError:
         raise ModuleNotFoundError("unicode_stats module is not installed.")
     # pylint: enable=all
-
+    # ToDo: refactor this code
     df['url'] = df['rows'].apply(list_of_str_to_links)
     df.drop(columns=['example_first', 'example_last'], errors='ignore', inplace=True)
 
@@ -129,7 +133,7 @@ def create_table_of_content_unicode_stats(fn_input_jsonl: str) -> Dict[str, str]
 
     res = {
         'unicode_stats': get_unicode_small_stats(df),
-        'CONCERNS': df[~df['block'].isin(list_block_good)].drop("rows", axis=1).to_markdown(index=False)
+        'CONCERNS': df[~df['block'].isin(preferred_blocks)].drop("rows", axis=1).to_markdown(index=False)
     }
 
     for column_name, df_small in df.groupby('column'):
