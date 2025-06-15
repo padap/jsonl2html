@@ -1,0 +1,6 @@
+{
+    "auto_index_columns": ["question", "questions", "prompt", "prompts", "title", "name"],
+    "max_lines": 10000,
+    "file_size_warning_mb": 50,
+    "logging_level": "INFO"
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+    "category": "Electronics",
+    "description": "High-quality wireless headphones with noise cancellation",
+    "in_stock": true,
+    "ratings": [5, 4, 5, 3, 4]
+  },
+  {
+    "title": "Coffee Maker Pro",
+    "price": 149.99,
+    "category": "Appliances", 
+    "description": "Professional-grade coffee maker with programmable features",
+    "in_stock": false,
+    "ratings": [4, 5, 4, 4, 5]
+  },
+  {
+    "title": "Running Shoes",
+    "price": 89.99,
+    "category": "Sports",
+    "description": "Lightweight running shoes with superior cushioning",
+    "in_stock": true,
+    "ratings": [5, 5, 4, 5, 4]
+  }
+]

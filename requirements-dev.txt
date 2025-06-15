@@ -1,0 +1,5 @@
+# Development dependencies
+black>=22.0.0
+flake8>=4.0.0
+pylint>=2.12.0
+pytest>=6.0.0

@@ -1,6 +1,11 @@
+"""
+Create a table of contents for Unicode statistics from a JSONL input file.
+"""
+# pylint: disable=line-too-long
 import json
-from pandas import DataFrame
 from typing import Dict
+from pandas import DataFrame
+
 
 def list_of_str_to_links(s: str, n_max_links: int = 50) -> str:
 
@@ -25,13 +30,15 @@ def list_of_str_to_links(s: str, n_max_links: int = 50) -> str:
     The returned links are formatted as [item](#index=item), where item is the integer incremented by 1.
     The indexing starts from 1 for display purposes.
     """
-    format_pattern = lambda item: f"[{item}](#index={item})"
+    def format_pattern(item: str) -> str:
+        return f"[{item}](#index={item})"
+
     lst = json.loads(s)
     lst.sort()
     lst = [i + 1 for i in lst]  # Increment indices for 1-based index
 
     if len(lst) > n_max_links:
-        l = n_max_links // 2
+        l = n_max_links // 2  # noqa: E741
         r = len(lst) - n_max_links // 2
         str_l = ' '.join(format_pattern(item) for item in lst[:l])
         str_r = ' '.join(format_pattern(item) for item in lst[r:])
