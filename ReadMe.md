@@ -33,7 +33,9 @@ convert_jsonl_to_html(
     fn_output="auto", 
     additional_table_content={"content": "value"}
 )
+```
 
+```python3
 # Convert JSON file
 convert_jsonl_to_html(
     fn_input="examples/test.json",
@@ -103,6 +105,9 @@ The `examples/` directory contains sample files:
 Try them out:
 ```bash
 jsonl2html examples/test.json
+```
+
+```bash
 jsonl2html examples/small.jsonl
 ```
 

@@ -111,6 +111,8 @@ def create_table_of_content_unicode_stats(fn_input_jsonl: str) -> Dict[str, str]
     This function processes the data to provide a summarized view of Unicode statistics,
     dropping unnecessary columns and organizing the results into a markdown format.
     """
+
+    # pylint: disable=all
     try:
         from unicode_stats.block_rules import list_block_good
         from unicode_stats.aggregation import AggregatedUnicodeBlockParser
@@ -118,6 +120,7 @@ def create_table_of_content_unicode_stats(fn_input_jsonl: str) -> Dict[str, str]
         df = agregated_parser.get_stats(fn_input_jsonl)
     except ModuleNotFoundError:
         raise ModuleNotFoundError("unicode_stats module is not installed.")
+    # pylint: enable=all
 
     df['url'] = df['rows'].apply(list_of_str_to_links)
     df.drop(columns=['example_first', 'example_last'], errors='ignore', inplace=True)

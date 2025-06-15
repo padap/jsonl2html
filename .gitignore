@@ -15,3 +15,5 @@ build/
 # Ignore Jupyter Notebook checkpoints
 **/.ipynb_checkpoints/
 
+# Ignore log files
+log/*.log

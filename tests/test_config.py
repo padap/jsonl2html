@@ -65,7 +65,7 @@ def test_converter_with_config():
         temp_input_path = f.name
 
     try:
-        converter = JSONLToHTMLConverter(temp_input_path)
+        converter = JSONLToHTMLConverter(temp_input_path, unicode_stats=False)
         assert hasattr(converter, 'config')
         assert isinstance(converter.config, Config)
         assert hasattr(converter.config, 'auto_index_columns')
@@ -85,7 +85,7 @@ def test_auto_index_detection():
         temp_input_path = f.name
 
     try:
-        converter = JSONLToHTMLConverter(temp_input_path)
+        converter = JSONLToHTMLConverter(temp_input_path, unicode_stats=False)
         detected_column = converter.get_auto_index_column(test_data[0])
         # Since "title" is in the default auto_index_columns,
         # it should be detected

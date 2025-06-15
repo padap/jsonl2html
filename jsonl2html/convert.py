@@ -33,7 +33,8 @@ class JSONLToHTMLConverter:
 
     def __init__(self, fn_input: str, fn_output: str = "auto",
                  index_column: Optional[str] = 'auto',
-                 additional_table_content: Optional[str] = None
+                 additional_table_content: Optional[str] = None,
+                 unicode_stats: bool = False
                  ) -> None:
         """
         Initialize the JsonlToHTML class,
@@ -47,6 +48,7 @@ class JSONLToHTMLConverter:
             If None, no index is added.
         additional_table_content (Optional[str]):
             Add additional table of content to the HTML file. None to disable
+        unicode_stats (bool): Whether to include unicode statistics in the output.
         """
         # Load configuration
         self.config: Config = load_config()
@@ -56,6 +58,7 @@ class JSONLToHTMLConverter:
 
         self.fn_input = fn_input
         self.index_column = index_column
+        self.unicode_stats = unicode_stats
 
         # Check file size and warn if too large
         try:
@@ -115,15 +118,16 @@ class JSONLToHTMLConverter:
                         list(self.additional_table_content.keys())
                         )
 
-        try:
-            unicode_statistics_markdown = create_table_of_content_unicode_stats(self.fn_input)
-            table_of_content['unicode'] = unicode_statistics_markdown
-            logger.info("Added table of content")
-        except ModuleNotFoundError:
-            logger.warning("Please install unicode_stats lib to get unicode table of content")
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            raise e
+        if self.unicode_stats:
+            try:
+                unicode_statistics_markdown = create_table_of_content_unicode_stats(self.fn_input)
+                table_of_content['unicode'] = unicode_statistics_markdown
+                logger.info("Added table of content")
+            except ModuleNotFoundError:
+                logger.warning("Please install unicode_stats lib to get unicode table of content")
+            except Exception as e:
+                logger.error(e, exc_info=True)
+                raise e
 
         data = [table_of_content] + data
         # Convert the data to a JSON string and then encode it in base64
@@ -269,7 +273,8 @@ class JSONLToHTMLConverter:
 def convert_jsonl_to_html(fn_input: str,
                           index_column: Optional[str] = 'auto',
                           fn_output: str = "auto",
-                          additional_table_content: Optional[str] = None
+                          additional_table_content: Optional[str] = None,
+                          unicode_stats: bool = True
                           ) -> None:
     """
     Convert jsonl or json to html
@@ -278,6 +283,7 @@ def convert_jsonl_to_html(fn_input: str,
     fn_input (str): The input JSONL or JSON file.
     index_column (Optional[str]): The column to use for indexing (default is 'auto' look at first row for ['qustion', 'prompts], None to disable).
     fn_output (str): The output HTML file (default is 'auto', creates HTML file with same base name as input)
+    unicode_stats (bool): Whether to include unicode statistics in the output (default is True)
     """
     if fn_input is None:
         logger.error("Error: 'fn_input' argument is required.")
@@ -287,7 +293,8 @@ def convert_jsonl_to_html(fn_input: str,
     converter = JSONLToHTMLConverter(fn_input,
                                      fn_output,
                                      index_column,
-                                     additional_table_content=additional_table_content
+                                     additional_table_content=additional_table_content,
+                                     unicode_stats=unicode_stats
                                      )
     converter.run()
 
